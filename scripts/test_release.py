@@ -5,15 +5,22 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import tarfile
+import zipfile
 from unittest.mock import patch
 
 import release
 
 
 class ReleaseTests(unittest.TestCase):
+    def prepare_documents(self, root):
+        for name in release.DOCUMENTS:
+            (root / name).write_text(f"Contents of {name}\n")
+
     def test_failed_compile_keeps_previous_release(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            self.prepare_documents(root)
             output = root / "bin" / "release"
             output.mkdir(parents=True)
             for name in ("atlo-darwin-arm64", "SHA256SUMS"):
@@ -37,6 +44,7 @@ class ReleaseTests(unittest.TestCase):
     def test_success_has_matching_checksums_and_portable_targets(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            self.prepare_documents(root)
 
             def compiler(command, *, cwd, env, check):
                 self.assertEqual(cwd, root)
@@ -52,10 +60,36 @@ class ReleaseTests(unittest.TestCase):
                 release.build_release(root, "go", "v1.2.3-rc.1+build")
             output = root / "bin" / "release"
             lines = (output / "SHA256SUMS").read_text().splitlines()
-            self.assertEqual(len(lines), 5)
+            self.assertEqual(len(lines), 13)
             for line in lines:
                 digest, name = line.split()
                 self.assertEqual(digest, hashlib.sha256((output / name).read_bytes()).hexdigest())
+            for system, arch in release.TARGETS:
+                name = f"atlo-v1.2.3-rc.1+build-{system}-{arch}"
+                expected = set(release.DOCUMENTS) | {"atlo.exe" if system == "windows" else "atlo"}
+                if system == "windows":
+                    with zipfile.ZipFile(output / (name + ".zip")) as bundle:
+                        self.assertEqual(set(bundle.namelist()), expected)
+                        self.assertEqual(bundle.read("atlo.exe"), b"windows/amd64")
+                else:
+                    with tarfile.open(output / (name + ".tar.gz")) as bundle:
+                        self.assertEqual(set(bundle.getnames()), expected)
+                        self.assertEqual(bundle.getmember("atlo").mode, 0o755)
+                        self.assertEqual(bundle.extractfile("atlo").read(), f"{system}/{arch}".encode())
+
+    def test_archives_are_reproducible_and_require_notices(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.prepare_documents(root)
+            binary = root / "binary"
+            binary.write_bytes(b"binary")
+            name = release.archive(root, root, binary, "linux", "amd64", "v1.0.0")
+            before = (root / name).read_bytes()
+            release.archive(root, root, binary, "linux", "amd64", "v1.0.0")
+            self.assertEqual((root / name).read_bytes(), before)
+            (root / "LICENSE").unlink()
+            with self.assertRaises(FileNotFoundError):
+                release.archive(root, root, binary, "linux", "amd64", "v1.0.0")
 
     def test_version_cannot_add_linker_flags_or_commands(self):
         for value in ("", "v1 -X main.version=other", "v1\nextra", "v1';echo hi", "v1$(id)", "x" * 129):

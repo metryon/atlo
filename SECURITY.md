@@ -2,10 +2,10 @@
 
 ## Supported versions
 
-atlo is currently in pre-release development, with no published releases or
-maintained release branches. Security fixes target the latest code on `main`.
-Update to the latest commit and rebuild before checking whether a problem still
-occurs. This policy will be updated when versioned releases are published.
+atlo is in early development. Security fixes target the latest published release
+and the latest code on `main`; older releases do not receive separate backports.
+Update to the latest release, or rebuild from `main`, before checking whether a
+problem still occurs.
 
 ## Reporting a vulnerability
 

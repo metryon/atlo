@@ -1,0 +1,147 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build and test without publishing (vX.Y.Z)'
+        required: true
+        default: v0.1.0
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.27.x'
+          check-latest: true
+      - name: Validate release version
+        id: version
+        env:
+          RELEASE_TAG: ${{ inputs.version || github.ref_name }}
+        run: |
+          python3 -c 'import os,sys; sys.path.insert(0,"scripts"); from packages import package_version; print(package_version(os.environ["RELEASE_TAG"]))'
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+      - run: make test
+      - run: go mod verify
+      - run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+      - name: Build binaries, archives, and package definitions
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          make release VERSION="$RELEASE_TAG"
+          python3 scripts/packages.py --version "$RELEASE_TAG"
+          mkdir -p bin/distribution
+          cp -R bin/release bin/packaging bin/distribution/
+          cp install.sh bin/distribution/release/
+          tar -czf "bin/distribution/release/atlo-packaging-$RELEASE_TAG.tar.gz" -C bin/packaging .
+          cd bin/distribution/release
+          sha256sum install.sh "atlo-packaging-$RELEASE_TAG.tar.gz" >> SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-build
+          path: bin/distribution/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+  arch:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-build
+          path: dist
+      - name: Build and install the Arch package
+        run: docker run --rm -v "$PWD/dist:/dist" -v "$PWD/scripts/verify-arch.sh:/verify-arch.sh:ro" archlinux:base-devel bash /verify-arch.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: arch-package
+          path: dist/arch/*.pkg.tar.zst
+          if-no-files-found: error
+          retention-days: 7
+  macos:
+    needs: build
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-build
+          path: dist
+      - name: Test native macOS binary and Homebrew formula syntax
+        env:
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          case "$(uname -m)" in arm64) arch=arm64 ;; x86_64) arch=amd64 ;; *) exit 1 ;; esac
+          mkdir unpack
+          tar -xzf "dist/release/atlo-$RELEASE_TAG-darwin-$arch.tar.gz" -C unpack
+          ./unpack/atlo version
+          ./unpack/atlo schema jira issue get
+          ruby -c dist/packaging/homebrew/atlo.rb
+  windows:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-build
+          path: dist
+      - name: Test Windows binary
+        env:
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        shell: pwsh
+        run: |
+          Expand-Archive "dist/release/atlo-$env:RELEASE_TAG-windows-amd64.zip" unpack
+          $result = (& ./unpack/atlo.exe version | ConvertFrom-Json)
+          if ($LASTEXITCODE -ne 0 -or $result.data.version -ne $env:RELEASE_TAG) { throw 'Version smoke test failed' }
+          & ./unpack/atlo.exe schema jira issue get
+          if ($LASTEXITCODE -ne 0) { throw 'Schema smoke test failed' }
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build, arch, macos, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-build
+          path: dist
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: arch-package
+          path: dist/release
+      - name: Publish verified release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          cd dist/release
+          sha256sum ./*.pkg.tar.zst | sed 's|  ./|  |' >> SHA256SUMS
+          sha256sum -c SHA256SUMS
+          # Create a draft first so partially uploaded assets are not the latest release.
+          gh release create "$RELEASE_TAG" --verify-tag --draft --title "$RELEASE_TAG" --generate-notes
+          gh release upload "$RELEASE_TAG" ./*
+          gh release edit "$RELEASE_TAG" --draft=false --latest

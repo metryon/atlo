@@ -9,6 +9,46 @@ Repository: [metryon/atlo](https://github.com/metryon/atlo).
 See [docs/](docs/README.md) for architecture, security boundaries, and development
 and verification procedures.
 
+## Install
+
+### macOS with Homebrew
+
+```sh
+brew install metryon/tap/atlo
+atlo version
+```
+
+Supports Apple Silicon and Intel Macs. Update with `brew upgrade metryon/tap/atlo`.
+
+### macOS and Linux with Bash
+
+```sh
+curl -fL https://github.com/metryon/atlo/releases/latest/download/install.sh -o install-atlo.sh
+# Inspect the downloaded script before running it.
+bash install-atlo.sh
+~/.local/bin/atlo version
+```
+
+The installer detects macOS/Linux and x86-64/ARM64, verifies the release archive's
+SHA-256 checksum, and installs the binary and license notices under `~/.local`.
+It does not change your shell configuration or invoke sudo. Add `~/.local/bin`
+to your PATH if needed. Select a release or another location with:
+
+```sh
+bash install-atlo.sh --version v0.1.0 --prefix "$HOME/.local"
+```
+
+### Arch Linux
+
+A native x86-64 package is available in [GitHub Releases](https://github.com/metryon/atlo/releases).
+Download the `.pkg.tar.zst` file and `SHA256SUMS` for the same release, verify the
+package checksum, and install it with `sudo pacman -U <package-file>`.
+The Bash installer above also works on Arch and Linux ARM64.
+
+AUR submission is pending account availability; `atlo-bin` is **not yet published
+to AUR**. See [installation and distribution](docs/installation.md) for exact
+commands, upgrades, removal, and the prepared AUR package files.
+
 ## Build and run
 
 Requires Go 1.25 or newer to build. The resulting executable needs no Go runtime.

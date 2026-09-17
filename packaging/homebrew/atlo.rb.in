@@ -1,0 +1,29 @@
+class Atlo < Formula
+  desc "Agent-first CLI for Jira Cloud and Confluence Cloud"
+  homepage "https://github.com/metryon/atlo"
+  version "@VERSION@"
+  license "MIT"
+
+  depends_on :macos
+
+  on_arm do
+    url "https://github.com/metryon/atlo/releases/download/@TAG@/atlo-@TAG@-darwin-arm64.tar.gz"
+    sha256 "@DARWIN_ARM64_SHA256@"
+  end
+  on_intel do
+    url "https://github.com/metryon/atlo/releases/download/@TAG@/atlo-@TAG@-darwin-amd64.tar.gz"
+    sha256 "@DARWIN_AMD64_SHA256@"
+  end
+
+  def install
+    bin.install "atlo"
+    prefix.install "LICENSE", "THIRD_PARTY_NOTICES"
+    doc.install "README.md"
+  end
+
+  test do
+    require "json"
+    assert_equal "@TAG@", JSON.parse(shell_output("#{bin}/atlo version")).dig("data", "version")
+    assert_match "jira issue get", shell_output("#{bin}/atlo schema jira issue get")
+  end
+end

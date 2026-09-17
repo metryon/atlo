@@ -1,0 +1,23 @@
+# Maintainer: Richard Diphoorn (https://github.com/rdtechie)
+pkgname=atlo-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='Agent-first CLI for Jira Cloud and Confluence Cloud'
+arch=('x86_64' 'aarch64')
+url='https://github.com/metryon/atlo'
+license=('MIT')
+depends=('ca-certificates')
+provides=("atlo=${pkgver}")
+conflicts=('atlo')
+options=('!strip' '!debug')
+source_x86_64=("${url}/releases/download/@TAG@/atlo-@TAG@-linux-amd64.tar.gz")
+source_aarch64=("${url}/releases/download/@TAG@/atlo-@TAG@-linux-arm64.tar.gz")
+sha256sums_x86_64=('@LINUX_AMD64_SHA256@')
+sha256sums_aarch64=('@LINUX_ARM64_SHA256@')
+
+package() {
+    install -Dm755 atlo "${pkgdir}/usr/bin/atlo"
+    install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+    install -Dm644 THIRD_PARTY_NOTICES "${pkgdir}/usr/share/licenses/${pkgname}/THIRD_PARTY_NOTICES"
+    install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+}

@@ -36,7 +36,7 @@ Pagination fuzzing also exercises malformed remote metadata. Guard regression
 tests assert that rejected preflights send no mutation, and cover neighboring
 valid transitions, including required fields with defaults and false/zero values.
 
-For CI workflow edits, also run `actionlint .github/workflows/ci.yml`. Keep action
+For CI workflow edits, also run `actionlint .github/workflows/*.yml`. Keep action
 commit pins and tool versions current through reviewed updates. Never embed
 Atlassian tokens into CI tests or examples.
 
@@ -47,7 +47,7 @@ make build VERSION=0.1.0-dev
 make release VERSION=v0.1.0
 ```
 
-Override `GO=/path/to/go` when Go is not on PATH. The existing release script
+Override `GO=/path/to/go` when Go is not on PATH. The release script
 cross-compiles standalone binaries with `CGO_ENABLED=0` and writes checksums to
 `bin/release/SHA256SUMS`:
 
@@ -58,6 +58,10 @@ cross-compiles standalone binaries with `CGO_ENABLED=0` and writes checksums to
 | Linux ARM64 | `atlo-linux-arm64` |
 | Linux x86-64 | `atlo-linux-amd64` |
 | Windows x86-64 | `atlo-windows-amd64.exe` |
+
+Each target also has a versioned `.tar.gz` archive (`.zip` on Windows) containing
+the executable, README, MIT license, and third-party notices. The checksum manifest
+covers raw binaries, archives, and the accompanying documents.
 
 Release compilation uses an isolated staging directory and `-mod=readonly`.
 If any target fails to compile, the previous binaries and checksums remain intact.
@@ -72,9 +76,12 @@ and Arch use the same binary for a given CPU architecture. Cross-compilation
 confirms the build, not runtime behavior on every target. Native smoke tests on
 the intended systems remain useful before publishing a release.
 
-The repository currently builds local artifacts. It does not yet publish GitHub
-Releases, a Homebrew formula, Ubuntu packages, or an Arch package. Those packaging
-decisions remain separate from this code/security cleanup.
+The [release workflow](../.github/workflows/release.yml) publishes tagged releases
+after native smoke tests and Arch package verification. Homebrew and AUR recipe
+templates are generated against the release checksums. See
+[installation and distribution](installation.md) for publishing, manual package
+index updates, and the pending AUR account requirement. Ubuntu can use the Bash
+installer; no `.deb` package is currently produced.
 
 ## Reviewing changes
 

@@ -1,0 +1,19 @@
+pkgbase = atlo-bin
+	pkgdesc = Agent-first CLI for Jira Cloud and Confluence Cloud
+	pkgver = @VERSION@
+	pkgrel = 1
+	url = https://github.com/metryon/atlo
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	depends = ca-certificates
+	provides = atlo=@VERSION@
+	conflicts = atlo
+	options = !strip
+	options = !debug
+	source_x86_64 = https://github.com/metryon/atlo/releases/download/@TAG@/atlo-@TAG@-linux-amd64.tar.gz
+	sha256sums_x86_64 = @LINUX_AMD64_SHA256@
+	source_aarch64 = https://github.com/metryon/atlo/releases/download/@TAG@/atlo-@TAG@-linux-arm64.tar.gz
+	sha256sums_aarch64 = @LINUX_ARM64_SHA256@
+
+pkgname = atlo-bin

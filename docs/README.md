@@ -1,5 +1,6 @@
 # atlo documentation
 
+- [Installation and distribution](installation.md): Homebrew, Bash, Arch packages, and release publishing.
 - [Agent guide](agent-guide.md): install the reusable skill and discover commands economically.
 - [Architecture](architecture.md): responsibilities, extension points, and measured optimizations.
 - [Security](security.md): trust boundaries, protections, and limitations.

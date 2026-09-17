@@ -1,14 +1,45 @@
 """Cross-compile a complete release before replacing the previous artifacts."""
 import argparse
 import hashlib
+import gzip
 import os
 from pathlib import Path
 import re
 import subprocess
 import tempfile
+import tarfile
+import zipfile
 
 TARGETS = (("darwin", "arm64"), ("darwin", "amd64"),
            ("linux", "arm64"), ("linux", "amd64"), ("windows", "amd64"))
+DOCUMENTS = ("LICENSE", "THIRD_PARTY_NOTICES", "README.md")
+
+
+def archive(staging, root, binary, system, arch, version):
+    """Stable archive metadata; extract directly to a binary and its notices."""
+    extension = "zip" if system == "windows" else "tar.gz"
+    name = f"atlo-{version}-{system}-{arch}.{extension}"
+    members = [(binary, "atlo.exe" if system == "windows" else "atlo", 0o755)]
+    members.extend((root / name, name, 0o644) for name in DOCUMENTS)
+    if system == "windows":
+        with zipfile.ZipFile(staging / name, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+            for source, target, mode in members:
+                info = zipfile.ZipInfo(target, (1980, 1, 1, 0, 0, 0))
+                info.create_system = 3
+                info.external_attr = (0o100000 | mode) << 16
+                info.compress_type = zipfile.ZIP_DEFLATED
+                bundle.writestr(info, source.read_bytes())
+    else:
+        with (staging / name).open("wb") as raw:
+            with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as compressed:
+                with tarfile.open(fileobj=compressed, mode="w") as bundle:
+                    for source, target, mode in members:
+                        info = tarfile.TarInfo(target)
+                        info.size = source.stat().st_size
+                        info.mode = mode
+                        with source.open("rb") as stream:
+                            bundle.addfile(info, stream)
+    return name
 
 
 def release_version(value):
@@ -43,6 +74,13 @@ def build_release(root, go, version):
             ], cwd=root, env={**os.environ, "CGO_ENABLED": "0", "GOOS": system,
                              "GOARCH": arch, "GOAMD64": "v1", "GOARM64": "v8.0"}, check=True)
             checksums.append(f"{sha256(target)}  {name}\n")
+            artifacts.append(name)
+            bundle = archive(staging, root, target, system, arch, version)
+            checksums.append(f"{sha256(staging / bundle)}  {bundle}\n")
+            artifacts.append(bundle)
+        for name in DOCUMENTS:
+            (staging / name).write_bytes((root / name).read_bytes())
+            checksums.append(f"{sha256(staging / name)}  {name}\n")
             artifacts.append(name)
         (staging / "SHA256SUMS").write_text("".join(checksums), encoding="utf-8")
         output.mkdir(exist_ok=True)
