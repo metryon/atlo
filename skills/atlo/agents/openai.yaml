@@ -1,0 +1,4 @@
+interface:
+  display_name: "atlo"
+  short_description: "Jira and Confluence through the atlo CLI"
+  default_prompt: "Use $atlo to carry out the requested Jira or Confluence task."

@@ -1,0 +1,17 @@
+{
+  "fields": {
+    "project": { "key": "ENG" },
+    "issuetype": { "id": "10001" },
+    "summary": "Build atlo",
+    "description": {
+      "type": "doc",
+      "version": 1,
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [{ "type": "text", "text": "An agent-first Jira and Confluence CLI." }]
+        }
+      ]
+    }
+  }
+}
