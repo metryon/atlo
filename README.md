@@ -6,7 +6,7 @@ the reasoning; atlo provides predictable operations.
 
 Repository: [metryon/atlo](https://github.com/metryon/atlo).
 
-See [docs/](docs/README.md) for architecture, security findings, and development
+See [docs/](docs/README.md) for architecture, security boundaries, and development
 and verification procedures.
 
 ## Build and run
@@ -295,7 +295,8 @@ and encoded JSON requests. JSON nesting is limited to 128 levels; Markdown trees
 are limited to 64 nesting levels and 100,000 nodes before rendering. Named input
 files must be regular files. Credential values are redacted from structured
 errors; server diagnostic reads are bounded to 4 KiB plus one overflow byte.
-See the [security review](docs/security.md) for trust boundaries and limitations.
+See [security and operating boundaries](docs/security.md) for protections and
+limitations, and the [security policy](SECURITY.md) to report a vulnerability privately.
 
 Jira issue edits have no general optimistic version guard in this implementation.
 Use small field updates and re-read shared fields before changing them. API search

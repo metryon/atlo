@@ -18,4 +18,4 @@ still have a continuation. Malformed pagination produces `invalid_response`, so
 do not describe an errored search as complete. A preflight error explicitly saying
 that no write was sent means the guard rejected the operation. Other write errors
 may have an uncertain outcome; inspect the target before retrying. See the
-[security review](security.md) for the guarantees and remaining limits.
+[security documentation](security.md) for the protections and remaining limits.
