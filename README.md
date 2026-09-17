@@ -1,4 +1,4 @@
-# atlo
+# Atlassian Operations CLI (atlo)
 
 A small, agent-first CLI for **Jira Cloud and Confluence Cloud**. One Go binary,
 API-token authentication, compact JSON, non-interactive commands. Agents provide
@@ -9,7 +9,7 @@ Repository: [metryon/atlo](https://github.com/metryon/atlo).
 See [docs/](docs/README.md) for architecture, security boundaries, and development
 and verification procedures.
 
-## Install
+## 📦 Install
 
 ### macOS with Homebrew
 
@@ -61,7 +61,7 @@ go build -trimpath -o bin/atlo ./cmd/atlo
 
 Put the binary on your PATH if desired. Examples below use `atlo`.
 
-## Authentication
+## 🔐 Authentication
 
 Create an [Atlassian API token](https://id.atlassian.com/manage-profile/security/api-tokens).
 Set these environment variables through your shell or secret manager:
@@ -100,7 +100,7 @@ For separate sites or credentials, product settings override shared settings:
 as legacy product-level aliases. Existing confit credentials therefore work.
 Use product-specific cloud IDs when the two products are on different sites.
 
-## Agent contract and token efficiency
+## 🤖 Agent contract and token efficiency
 
 - Success: exactly one compact JSON value on stdout, `{ "data": ..., "meta": ... }`.
 - Failure: stdout is empty; stderr contains one `{ "error": ... }` JSON object.
@@ -239,7 +239,7 @@ There is no lossless Markdown round trip for existing Confluence pages.
 Deletion requires `--yes`, reads the page first, and only accepts current pages.
 This version exposes moving pages to trash, not permanent purge.
 
-## Attachments
+## 📎 Attachments
 
 ```sh
 # Preview locally; remove --dry-run to upload the file.
@@ -350,7 +350,7 @@ Copyright (c) 2026 Richard Diphoorn.
 Commercial use, modification, and redistribution are permitted. Copies or
 substantial portions must retain the copyright and license notices.
 
-## Development
+## 🛠️ Development
 
 ```sh
 go test -race -cover ./...
